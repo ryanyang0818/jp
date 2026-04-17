@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打字防禦</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #050518;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      color: #fff;
+    }
+    #header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 20px;
+      background: rgba(0,0,0,0.5);
+      border-bottom: 1px solid #223;
+      flex-shrink: 0;
+    }
+    #score-display {
+      font-size: 17px;
+      color: #7df9ff;
+      letter-spacing: 1px;
+    }
+    #score-display span { color: #fff; font-weight: bold; }
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #88aacc;
+    }
+    #controls label { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+    #controls input[type=checkbox] { cursor: pointer; accent-color: #7df9ff; width: 15px; height: 15px; }
+    #game-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #input-area {
+      background: rgba(0,0,0,0.6);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid #223;
+      flex-shrink: 0;
+    }
+    #input-area .prompt { color: #7df9ff; font-size: 20px; }
+    #word-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #7df9ff;
+      color: #fff;
+      font-size: 20px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      padding: 4px 2px;
+      caret-color: #7df9ff;
+      letter-spacing: 2px;
+    }
+    #word-input::placeholder { color: #445; letter-spacing: 0; }
+
+    /* Overlays */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .overlay h1 {
+      font-size: 52px;
+      margin-bottom: 16px;
+      letter-spacing: 4px;
+      text-shadow: 0 0 30px currentColor;
+    }
+    #start-overlay h1 { color: #7df9ff; }
+    #gameover-overlay h1 { color: #ff5555; }
+    .overlay p {
+      font-size: 16px;
+      color: #99bbcc;
+      margin-bottom: 10px;
+      text-align: center;
+      line-height: 1.9;
+    }
+    .overlay .score-line {
+      font-size: 22px;
+      color: #fff;
+      margin: 6px 0;
+    }
+    .overlay .best-line {
+      font-size: 16px;
+      color: #7df9ff;
+      margin-bottom: 32px;
+    }
+    .big-btn {
+      background: #7df9ff;
+      color: #050518;
+      border: none;
+      padding: 12px 40px;
+      font-size: 18px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      letter-spacing: 2px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .big-btn:hover { background: #b0fdff; transform: scale(1.04); }
+    .big-btn:active { transform: scale(0.97); }
+
+    /* Speed indicator */
+    #speed-bar {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #556;
+      letter-spacing: 1px;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div id="score-display">
+      分數：<span id="score">0</span>
+      &nbsp;&nbsp;
+      最高：<span id="best">0</span>
+    </div>
+    <div id="controls">
+      <label>
+        <input type="checkbox" id="fixed-speed">
+        固定速度
+      </label>
+    </div>
+  </div>
+
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="speed-bar" style="display:none">速度 LV.<span id="speed-lv">1</span></div>
+
+    <!-- 開始畫面 -->
+    <div class="overlay" id="start-overlay">
+      <h1>打字防禦</h1>
+      <p>
+        英文單字將從天空落下<br>
+        輸入單字並按 <strong style="color:#fff">Enter</strong> 消除它們<br>
+        別讓任何單字碰到地面！
+      </p>
+      <button class="big-btn" id="start-btn">開始遊戲</button>
+    </div>
+
+    <!-- 遊戲結束畫面 -->
+    <div class="overlay" id="gameover-overlay" style="display:none">
+      <h1>GAME OVER</h1>
+      <div class="score-line">本局分數：<strong id="final-score">0</strong></div>
+      <div class="best-line">最高分：<span id="final-best">0</span></div>
+      <button class="big-btn" id="restart-btn">再玩一次</button>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <span class="prompt">&gt;</span>
+    <input
+      type="text"
+      id="word-input"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder="輸入單字後按 Enter..."
+    >
+  </div>
+
+<script>
+// ─── 單字庫 ──────────────────────────────────────────────
+const WORD_BANK = {
+  short: [
+    'act','age','air','ant','ape','arm','art','ask',
+    'bag','ban','bar','bat','bed','big','bit','box',
+    'bug','bus','buy','can','cap','car','cat','cry',
+    'cup','cut','day','dig','dog','dry','ear','eat',
+    'egg','end','eye','fan','fat','fit','fly','fog',
+    'fun','fur','gap','gas','get','gun','gut','had',
+    'ham','hat','hit','hop','hot','hug','ice','ink',
+    'jar','joy','key','kid','kit','lap','law','leg',
+    'lip','log','mad','man','map','men','mix','mud',
+    'nap','net','nod','oak','oil','old','one','out',
+    'own','pad','pan','pay','pet','pie','pig','pin',
+    'pop','pot','pub','put','ran','rat','raw','ray',
+    'red','rid','rob','rod','row','rub','rug','run',
+    'sad','sat','saw','say','sea','shy','sin','sit',
+    'sky','sob','son','sun','tab','tan','tap','tea',
+    'tin','tip','top','toy','tub','tug','two','use',
+    'van','war','web','wed','wet','win','wit','wow',
+    'zip','zoo',
+  ],
+  medium: [
+    'able','acid','arch','army','atom','auto','away','back',
+    'bale','ball','band','bark','barn','base','bath','bead',
+    'beak','beam','bean','beat','bell','belt','bend','best',
+    'bike','bill','bird','bite','blow','blue','blur','boat',
+    'body','bold','bolt','bomb','bond','bone','book','boom',
+    'boot','bore','both','bowl','brew','buck','buff','bull',
+    'bump','burn','buzz','cage','cake','call','calm','camp',
+    'cape','card','care','cart','cash','cast','cave','cell',
+    'change','chin','chip','chop','city','clap','clay','clip',
+    'club','clue','coal','coat','code','coil','cold','cola',
+    'come','cook','cope','cord','core','corn','cost','crab',
+    'crew','crop','crow','cure','curl','cute','damp','dare',
+    'dark','dart','data','date','dawn','dead','deal','deck',
+    'deep','deer','dine','dirt','dish','disk','dive','dock',
+    'door','dose','down','drag','draw','drip','drop','drum',
+    'dull','dump','dune','dusk','dust','duty','each','earn',
+    'ease','east','edge','epic','even','evil','face','fact',
+    'fade','fail','fair','fake','fall','fame','fare','farm',
+    'fate','fear','feat','feed','feel','fell','file','fill',
+    'find','fine','fire','firm','fish','flag','flaw','flee',
+    'flex','flip','flow','foam','fold','fond','food','fool',
+    'foot','fore','fork','form','fort','free','frog','fuel',
+    'full','fund','game','gate','gear','gift','girl','give',
+    'glow','glue','gold','golf','good','gore','grab','grew',
+    'grid','grim','grin','grip','grit','grow','gulp','gust',
+    'hack','hail','half','hall','hand','hard','harm','hash',
+    'hate','have','head','heal','heap','heat','heel','help',
+    'here','hero','high','hike','hill','hint','hire','hold',
+    'hole','home','hood','hook','hope','horn','hour','hulk',
+    'hunt','hurt','idle','inch','jade','jail','jest','join',
+    'joke','jump','junk','just','keen','keep','kill','kind',
+    'king','kiss','know','lace','lack','lake','lamp','land',
+    'lane','lark','last','late','lead','leaf','lean','leap',
+    'lend','lift','like','lime','line','link','list','live',
+    'load','long','look','loop','lose','love','luck','lung',
+    'lure','lush','mail','main','make','male','mark','mast',
+    'maze','meal','mean','meat','melt','menu','mild','mile',
+    'milk','mill','mind','mine','mint','miss','mist','mode',
+    'moon','more','moss','most','moth','move','much','must',
+    'nail','name','near','neck','need','nest','news','nice',
+    'node','norm','nose','note','noon','nude','once','only',
+    'open','over','pace','page','palm','park','past','path',
+    'peak','peel','perk','pest','pick','pile','pine','pipe',
+    'plan','play','plea','plot','plug','poem','pole','pond',
+    'pool','poor','pore','port','pose','pray','prey','pull',
+    'pump','pure','push','rack','rage','rail','rain','rake',
+    'rank','rate','rave','read','real','reap','rent','rest',
+    'rice','rich','ride','ring','rise','risk','road','roar',
+    'rock','role','roll','roof','room','rope','rose','rule',
+    'rush','rust','safe','sail','sake','sale','sand','save',
+    'seal','seat','seed','seek','send','shed','ship','shoe',
+    'shop','shot','sick','sigh','sign','silk','sing','sink',
+    'site','size','skin','slam','slip','slot','slow','snap',
+    'snow','soap','sock','soft','soil','sole','song','soot',
+    'sore','sort','soul','soup','sour','span','spin','spot',
+    'stem','step','stew','stir','stop','stun','suit','surf',
+    'swan','sway','swim','tail','take','tale','talk','tall',
+    'tame','tank','tape','task','team','tear','tell','tend',
+    'tent','term','test','text','than','thin','they','tilt',
+    'time','tiny','tire','toad','told','toll','tone','toss',
+    'tour','trek','trim','trip','true','tube','tune','turf',
+    'turn','twig','twin','type','ugly','undo','unit','urge',
+    'vain','vary','vast','vein','vent','view','vine','void',
+    'vote','wade','wail','wait','wake','walk','wall','wane',
+    'want','ward','warm','warp','wasp','wave','wear','weed',
+    'week','well','west','wide','wild','will','wind','wine',
+    'wing','wire','wise','wish','wolf','wood','word','wore',
+    'work','worm','yawn','year','yell','zeal','zero','zone',
+  ],
+  long: [
+    'about','above','abuse','actor','acute','admit','adopt',
+    'adult','after','again','agent','agree','ahead','alarm',
+    'album','alert','alike','alive','alley','alone','along',
+    'altar','amber','amble','amend','angel','anger','angle',
+    'angry','anime','annex','annoy','antsy','anvil','aorta',
+    'apart','apple','apply','apron','arena','argue','arise',
+    'array','arson','aside','asset','atlas','attic','audio',
+    'audit','auger','avoid','awful','azalea','babel','badge',
+    'baker','basic','basis','batch','beach','began','begin',
+    'being','below','bench','berth','birth','black','blade',
+    'blame','bland','blank','blast','blaze','bleak','bleed',
+    'blend','bless','blind','block','blood','bloom','blown',
+    'board','bonus','boost','booth','brace','braid','brain',
+    'brave','bread','break','breed','brick','bride','brief',
+    'brine','brisk','broad','broil','broke','brood','brook',
+    'broth','brown','brunt','brush','brute','buddy','build',
+    'built','bunch','braid','candy','carry','catch','cause',
+    'cease','chair','chalk','charm','cheap','check','cheek',
+    'cheer','chest','chief','child','chill','choir','chore',
+    'civic','civil','claim','clank','clash','class','clean',
+    'clear','clerk','click','cliff','climb','cling','clock',
+    'clone','close','cloud','clove','clown','comet','comic',
+    'comma','coral','could','count','court','cover','covet',
+    'crack','craft','cramp','crane','crash','crawl','craze',
+    'creak','cream','crisp','croak','crown','cruel','crumb',
+    'crush','crust','daily','dance','dealt','death','debut',
+    'decay','decoy','delay','depot','depth','derby','derby',
+    'devil','diary','digit','dirge','disco','ditch','dizzy',
+    'dodge','doubt','dough','dowry','draft','drain','dream',
+    'dress','drift','drink','drive','drove','drown','dryer',
+    'eager','eagle','early','earth','eight','elbow','elder',
+    'elite','email','ember','empty','endow','enemy','enjoy',
+    'enter','entry','equip','erupt','essay','evade','exact',
+    'exist','extra','fable','facet','faith','fancy','fault',
+    'feast','feral','fetch','fever','fiber','field','fiery',
+    'fifth','fifty','fight','filth','first','fixed','fjord',
+    'flame','flash','flask','flesh','fling','flock','flood',
+    'floor','flora','floss','flour','flown','fluff','flunk',
+    'flute','focal','focus','force','found','frame','frank',
+    'fraud','fresh','frisk','front','frost','froze','fruit',
+    'fully','genus','ghost','given','gland','glass','glaze',
+    'glide','gloom','gloss','glove','going','grace','grade',
+    'grand','grant','grape','grasp','grass','gravel','graze',
+    'great','greed','green','greet','grief','grind','groan',
+    'grope','gross','group','grove','gruel','gruff','guard',
+    'guess','guest','guide','guild','guile','guise','gusto',
+    'happy','harsh','haste','haunt','haven','hazel','heady',
+    'heard','heart','heavy','hedge','hence','hinge','hippo',
+    'hoard','hoary','homer','honor','horse','hotel','hound',
+    'hover','human','humid','humor','hurry','hyena','ideal',
+    'image','imply','inbox','index','infer','ingot','inner',
+    'input','inter','intro','inure','ivory','jewel','joker',
+    'joust','juice','juicy','knack','kneel','knife','knock',
+    'knoll','kudos','label','lance','large','laser','later',
+    'laugh','layer','legal','lemon','level','light','limit',
+    'linen','liner','liver','local','lodge','logic','loose',
+    'lower','loyal','lucid','lucky','lunar','lyric','magic',
+    'major','maker','manor','maple','march','marry','match',
+    'maven','maxim','maybe','media','mercy','merit','metal',
+    'micro','might','minor','minus','mirth','mixer','model',
+    'moist','money','month','moose','moral','morph','motor',
+    'mount','mourn','mouse','mouth','mover','movin','musky',
+    'myrrh','nasal','night','ninja','noble','noise','novel',
+    'nurse','nymph','ocean','olive','onset','opera','order',
+    'other','outer','overt','oxide','ozone','panda','panic',
+    'paper','party','paste','patch','pause','peace','pearl',
+    'pedal','penny','perch','pilot','pitch','pixel','place',
+    'plaid','plank','plant','plaza','pluck','plumb','plump',
+    'plunge','plunk','plush','point','polar','pouch','pound',
+    'power','press','price','pride','prime','prince','print',
+    'prior','prize','probe','prone','proof','prose','proud',
+    'prowl','prune','psalm','pulse','queen','query','quest',
+    'queue','quick','quiet','quota','quote','rabbi','radar',
+    'radio','rainy','raise','rally','reach','react','rebel',
+    'recur','reign','relay','relic','remix','renew','repay',
+    'repel','rider','ridge','rifle','right','rigid','risky',
+    'rival','river','robin','robot','rogue','roman','rough',
+    'round','route','rover','royal','rugby','ruler','rural',
+    'saint','salve','sandy','sauce','scale','scare','scene',
+    'scent','score','scour','scrap','screw','seize','sense',
+    'serve','setup','seven','shade','shaft','shake','shale',
+    'shall','shame','shape','share','shark','sharp','sheen',
+    'sheep','shelf','shell','shift','shine','shire','shirt',
+    'shock','shore','short','shout','shove','shrub','shrug',
+    'siege','skate','skill','skull','slack','slang','slash',
+    'slave','sleek','sleep','sleet','slide','slope','sloth',
+    'slump','smart','smash','smear','smell','smile','smite',
+    'smoke','snail','snake','snare','sneak','sneeze','snide',
+    'sniff','snore','snort','solar','solid','solve','south',
+    'space','spare','spark','spawn','spear','speck','speed',
+    'spend','spice','spike','spine','spoke','spoon','sport',
+    'spray','squad','squat','squid','stack','staff','stage',
+    'stain','stale','stalk','stall','stamp','stand','stare',
+    'stark','stash','state','stave','steak','steal','steel',
+    'steer','stern','stick','stiff','still','sting','stock',
+    'stomp','stone','stood','storm','story','stout','stove',
+    'strap','straw','stray','strip','strum','strut','stuck',
+    'study','stump','style','sugar','super','surge','sweet',
+    'swift','swipe','swirl','swoop','syrup','table','taunt',
+    'tense','thank','theme','thick','thing','third','thorn',
+    'throw','tiger','tight','timer','titan','title','toast',
+    'token','torch','total','touch','tough','towel','tower',
+    'track','trade','trail','train','tramp','traps','trash',
+    'trawl','tread','treat','trial','tribe','trick','tried',
+    'troop','trove','truce','truck','truly','trump','trunk',
+    'trust','truth','tumor','tuner','tweak','tweed','twice',
+    'twirl','twist','unify','union','until','untie','unzip',
+    'upper','upset','urban','usher','utter','vague','value',
+    'valve','valor','vapor','vault','visor','vital','vivid',
+    'vocal','vodka','voice','vomit','vouch','vying','waltz',
+    'waste','watch','water','weave','weird','whale','wheat',
+    'wheel','where','which','while','whirl','white','whole',
+    'whose','wield','witch','withe','woman','women','world',
+    'worry','worst','worth','wound','wrath','write','wrote',
+    'yacht','yield','young','youth','zebra',
+  ],
+};
+
+// 扁平化單字表（按長度分段備用）
+const ALL_WORDS = [...WORD_BANK.short, ...WORD_BANK.medium, ...WORD_BANK.long];
+
+// ─── Canvas 設定 ──────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const container = document.getElementById('game-container');
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+}
+window.addEventListener('resize', () => { resize(); });
+resize();
+
+// ─── 音效（Web Audio API） ────────────────────────────────
+let audioCtx = null;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playExplosion(pitch = 1) {
+  try {
+    const ac = ensureAudio();
+    const sr = ac.sampleRate;
+    const dur = 0.22;
+    const buf = ac.createBuffer(1, sr * dur, sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.5);
+    }
+
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = pitch;
+
+    const bpf = ac.createBiquadFilter();
+    bpf.type = 'bandpass';
+    bpf.frequency.value = 320 * pitch;
+    bpf.Q.value = 0.6;
+
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.5, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+
+    src.connect(bpf);
+    bpf.connect(gain);
+    gain.connect(ac.destination);
+    src.start();
+    src.stop(ac.currentTime + dur);
+  } catch (e) {}
+}
+
+// ─── 靜態星星 ─────────────────────────────────────────────
+let stars = [];
+function genStars() {
+  stars = Array.from({ length: 100 }, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    r: Math.random() * 1.4 + 0.4,
+    a: Math.random() * 0.7 + 0.15,
+    twinkle: Math.random() * Math.PI * 2,
+  }));
+}
+genStars();
+
+// ─── 遊戲狀態 ─────────────────────────────────────────────
+let words = [];       // { text, x, y, speed, color, alpha }
+let particles = [];   // { x, y, vx, vy, life, decay, color, size }
+let score = 0;
+let gameRunning = false;
+let startTime = 0;
+let spawnTimer = null;
+let animFrame = null;
+let frameCount = 0;
+let bestScore = parseInt(localStorage.getItem('td-best') || '0');
+
+const GROUND_PAD = 36;
+const getGroundY = () => canvas.height - GROUND_PAD;
+
+// ─── 難度 ─────────────────────────────────────────────────
+function getLevel() {
+  const elapsed = (Date.now() - startTime) / 1000;
+  return Math.floor(elapsed / 15);
+}
+
+function getCurrentSpeed() {
+  if (document.getElementById('fixed-speed').checked) return 1.3;
+  return Math.min(1.3 + getLevel() * 0.28, 4.2);
+}
+
+function getSpawnMs() {
+  if (document.getElementById('fixed-speed').checked) return 2300;
+  return Math.max(2300 - getLevel() * 160, 750);
+}
+
+function getWordForLevel() {
+  const lv = getLevel();
+  if (lv < 2) {
+    // 前 30 秒：短單字
+    return WORD_BANK.short[Math.floor(Math.random() * WORD_BANK.short.length)];
+  } else if (lv < 5) {
+    // 30~75 秒：短+中
+    const pool = [...WORD_BANK.short, ...WORD_BANK.medium];
+    return pool[Math.floor(Math.random() * pool.length)];
+  } else {
+    // 75 秒後：全部
+    return ALL_WORDS[Math.floor(Math.random() * ALL_WORDS.length)];
+  }
+}
+
+function wordColor(speed) {
+  if (speed < 2.0) return '#7df9ff';
+  if (speed < 3.0) return '#ffd966';
+  return '#ff6b6b';
+}
+
+// ─── 生成單字 ─────────────────────────────────────────────
+function spawnWord() {
+  if (!gameRunning) return;
+  const text = getWordForLevel();
+  const speed = getCurrentSpeed();
+  const margin = 70;
+  const x = margin + Math.random() * (canvas.width - margin * 2);
+
+  words.push({ text, x, y: -18, speed, color: wordColor(speed) });
+
+  // 更新速度指示
+  const lv = getLevel();
+  document.getElementById('speed-lv').textContent = lv + 1;
+
+  // 重排計時（間隔會隨時間縮短）
+  clearInterval(spawnTimer);
+  spawnTimer = setInterval(spawnWord, getSpawnMs());
+}
+
+// ─── 爆炸粒子 ─────────────────────────────────────────────
+function createExplosion(x, y, color) {
+  const n = 30;
+  for (let i = 0; i < n; i++) {
+    const angle = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.4;
+    const spd = 2.5 + Math.random() * 4.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1.0,
+      decay: 0.025 + Math.random() * 0.03,
+      color,
+      size: 3 + Math.random() * 4,
+    });
+  }
+}
+
+// ─── 繪製 ─────────────────────────────────────────────────
+function drawBg() {
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#060620');
+  grad.addColorStop(1, '#0d1b35');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const t = frameCount * 0.03;
+  for (const s of stars) {
+    const twinkAlpha = s.a * (0.7 + 0.3 * Math.sin(t + s.twinkle));
+    ctx.globalAlpha = twinkAlpha;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGround() {
+  const y = getGroundY();
+  ctx.save();
+  ctx.strokeStyle = '#cc2222';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.7;
+  ctx.setLineDash([8, 5]);
+  ctx.beginPath();
+  ctx.moveTo(0, y);
+  ctx.lineTo(canvas.width, y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawWords() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const w of words) {
+    const alpha = Math.min(1, (canvas.height - w.y) / 60); // 接近地面時微微透明
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.shadowColor = w.color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = w.color;
+    ctx.fillText(w.text, w.x, w.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── 主迴圈 ───────────────────────────────────────────────
+function gameLoop() {
+  frameCount++;
+  drawBg();
+
+  // 更新單字位置
+  const gy = getGroundY();
+  let hitGround = false;
+  for (const w of words) {
+    w.y += w.speed;
+    if (w.y >= gy) { hitGround = true; break; }
+  }
+
+  // 更新粒子
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  drawWords();
+  drawParticles();
+  drawGround();
+
+  if (hitGround) {
+    endGame();
+    return;
+  }
+
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+// ─── 遊戲控制 ─────────────────────────────────────────────
+function startGame() {
+  words = [];
+  particles = [];
+  score = 0;
+  gameRunning = true;
+  frameCount = 0;
+  startTime = Date.now();
+
+  document.getElementById('score').textContent = '0';
+  document.getElementById('best').textContent = bestScore;
+  document.getElementById('start-overlay').style.display = 'none';
+  document.getElementById('gameover-overlay').style.display = 'none';
+  document.getElementById('speed-bar').style.display = 'block';
+  document.getElementById('speed-lv').textContent = '1';
+
+  wordInput.value = '';
+  wordInput.focus();
+
+  clearInterval(spawnTimer);
+  spawnTimer = setInterval(spawnWord, getSpawnMs());
+  spawnWord();
+
+  if (animFrame) cancelAnimationFrame(animFrame);
+  gameLoop();
+}
+
+function endGame() {
+  gameRunning = false;
+  clearInterval(spawnTimer);
+  cancelAnimationFrame(animFrame);
+  document.getElementById('speed-bar').style.display = 'none';
+
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem('td-best', bestScore);
+  }
+
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('final-best').textContent = bestScore;
+  document.getElementById('gameover-overlay').style.display = 'flex';
+}
+
+// ─── 輸入處理 ─────────────────────────────────────────────
+const wordInput = document.getElementById('word-input');
+
+wordInput.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const typed = wordInput.value.trim().toLowerCase();
+  wordInput.value = '';
+  if (!typed || !gameRunning) return;
+
+  // 找最靠近地面的吻合單字
+  let bestIdx = -1;
+  let bestY = -Infinity;
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].text.toLowerCase() === typed && words[i].y > bestY) {
+      bestY = words[i].y;
+      bestIdx = i;
+    }
+  }
+
+  if (bestIdx !== -1) {
+    const w = words[bestIdx];
+    createExplosion(w.x, w.y, w.color);
+    const pitch = w.speed > 3 ? 1.4 : w.speed > 2 ? 1.1 : 0.9;
+    playExplosion(pitch);
+    words.splice(bestIdx, 1);
+
+    // 計分：長單字加分
+    const gain = typed.length >= 8 ? 3 : typed.length >= 5 ? 2 : 1;
+    score += gain;
+    document.getElementById('score').textContent = score;
+    if (score > bestScore) {
+      bestScore = score;
+      document.getElementById('best').textContent = bestScore;
+      localStorage.setItem('td-best', bestScore);
+    }
+  }
+});
+
+// 保持 input focus
+document.addEventListener('click', () => { if (gameRunning) wordInput.focus(); });
+document.addEventListener('keydown', (e) => {
+  if (gameRunning && e.target !== wordInput && !['Enter','Tab','F5'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+    wordInput.focus();
+  }
+});
+
+// ─── 按鈕 ─────────────────────────────────────────────────
+document.getElementById('start-btn').addEventListener('click', () => { ensureAudio(); startGame(); });
+document.getElementById('restart-btn').addEventListener('click', () => { ensureAudio(); startGame(); });
+
+// ─── 初始化 ───────────────────────────────────────────────
+document.getElementById('best').textContent = bestScore;
+
+// 開場畫面：畫一次靜態背景
+(function initScreen() {
+  drawBg();
+  drawGround();
+})();
+</script>
+</body>
+</html>
