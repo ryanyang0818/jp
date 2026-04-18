@@ -1,0 +1,96 @@
+{
+  "title": "方位詞單字集",
+  "category": "位置・方向",
+  "words": [
+    {
+      "id": 1,
+      "japanese": "うえ",
+      "kanji": "上",
+      "romaji": "ue",
+      "chinese": "上面・上方",
+      "example_jp": "机の上に本があります。",
+      "example_zh": "桌子上面有書。"
+    },
+    {
+      "id": 2,
+      "japanese": "した",
+      "kanji": "下",
+      "romaji": "shita",
+      "chinese": "下面・下方",
+      "example_jp": "椅子の下に猫がいます。",
+      "example_zh": "椅子下面有貓。"
+    },
+    {
+      "id": 3,
+      "japanese": "みぎ",
+      "kanji": "右",
+      "romaji": "migi",
+      "chinese": "右邊・右側",
+      "example_jp": "駅の右に銀行があります。",
+      "example_zh": "車站右邊有銀行。"
+    },
+    {
+      "id": 4,
+      "japanese": "ひだり",
+      "kanji": "左",
+      "romaji": "hidari",
+      "chinese": "左邊・左側",
+      "example_jp": "学校の左にコンビニがあります。",
+      "example_zh": "學校左邊有便利商店。"
+    },
+    {
+      "id": 5,
+      "japanese": "まえ",
+      "kanji": "前",
+      "romaji": "mae",
+      "chinese": "前面・正前方",
+      "example_jp": "駅の前にバス停があります。",
+      "example_zh": "車站前面有公車站。"
+    },
+    {
+      "id": 6,
+      "japanese": "うしろ",
+      "kanji": "後ろ",
+      "romaji": "ushiro",
+      "chinese": "後面・背後",
+      "example_jp": "建物の後ろに駐車場があります。",
+      "example_zh": "建築物後面有停車場。"
+    },
+    {
+      "id": 7,
+      "japanese": "なか",
+      "kanji": "中",
+      "romaji": "naka",
+      "chinese": "裡面・中間",
+      "example_jp": "引き出しの中に鍵があります。",
+      "example_zh": "抽屜裡面有鑰匙。"
+    },
+    {
+      "id": 8,
+      "japanese": "そと",
+      "kanji": "外",
+      "romaji": "soto",
+      "chinese": "外面・外部",
+      "example_jp": "外は寒いですね。",
+      "example_zh": "外面很冷呢。"
+    },
+    {
+      "id": 9,
+      "japanese": "となり",
+      "kanji": "隣",
+      "romaji": "tonari",
+      "chinese": "隔壁・緊鄰的旁邊",
+      "example_jp": "私のとなりに田中さんが座っています。",
+      "example_zh": "田中先生坐在我旁邊。"
+    },
+    {
+      "id": 10,
+      "japanese": "ちかく",
+      "kanji": "近く",
+      "romaji": "chikaku",
+      "chinese": "附近・近處",
+      "example_jp": "学校の近くに住んでいます。",
+      "example_zh": "住在學校附近。"
+    }
+  ]
+}

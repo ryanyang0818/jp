@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方位詞學習卡片</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      height: 100vh;
+      background: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
+      color: #2d3748;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 0 10px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      color: #2d3748;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    header p {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      color: #718096;
+      letter-spacing: 3px;
+    }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      max-width: 520px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* ── Progress ── */
+    .progress-section {
+      width: 100%;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+      color: #718096;
+    }
+
+    .progress-label span:last-child {
+      color: #4a90d9;
+      font-weight: 600;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 7px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4a90d9, #63b3ed);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* ── Card Scene ── */
+    .scene {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 1000px;
+      flex: 1;
+      min-height: 180px;
+      max-height: 320px;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    .card.flip-right {
+      transform: rotateY(180deg);
+    }
+
+    .card.flip-left {
+      transform: rotateY(-180deg);
+    }
+
+    .card.flip-down {
+      transform: rotateX(180deg);
+    }
+
+    .card.flip-up {
+      transform: rotateX(-180deg);
+    }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 28px;
+      gap: 12px;
+    }
+
+    /* 正面：白色 + 藍色邊框陰影 */
+    .front {
+      background: #ffffff;
+      border: 1px solid #bee3f8;
+      box-shadow:
+        0 4px 24px rgba(74, 144, 217, 0.12),
+        0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    /* 背面預設朝向（右翻用） */
+    .card .back {
+      transform: rotateY(180deg);
+    }
+
+    .card.flip-left .back {
+      transform: rotateY(-180deg);
+    }
+
+    .card.flip-down .back {
+      transform: rotateX(180deg);
+    }
+
+    .card.flip-up .back {
+      transform: rotateX(-180deg);
+    }
+
+    /* 背面：米白暖色調 */
+    .back {
+      background: #fffaf0;
+      border: 1px solid #fbd38d;
+      box-shadow:
+        0 4px 24px rgba(237, 172, 82, 0.12),
+        0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    /* 正面元素 */
+    .card-index {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      font-size: 0.72rem;
+      color: #a0aec0;
+      letter-spacing: 1px;
+    }
+
+    .jp-kana {
+      font-size: 4.2rem;
+      font-weight: 800;
+      color: #2b6cb0;
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+
+    .jp-kanji {
+      font-size: 1.5rem;
+      color: #4a5568;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    .jp-romaji {
+      font-size: 0.95rem;
+      color: #a0aec0;
+      letter-spacing: 4px;
+    }
+
+    .flip-hint {
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: #cbd5e0;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .flip-hint::before {
+      content: '↩';
+      font-size: 0.9rem;
+    }
+
+    /* 背面元素 */
+    .zh-meaning {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #744210;
+      letter-spacing: 2px;
+    }
+
+    .example-box {
+      width: 100%;
+      background: rgba(237, 172, 82, 0.1);
+      border: 1px solid rgba(237, 172, 82, 0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      text-align: left;
+      margin-top: 4px;
+    }
+
+    .example-jp {
+      font-size: 1.8rem;
+      color: #4a5568;
+      line-height: 1.9;
+      letter-spacing: 0.5px;
+    }
+
+    .example-divider {
+      width: 100%;
+      height: 2px;
+      background: #fbd38d;
+      margin: 6px auto;
+      border-radius: 1px;
+    }
+
+    .example-zh {
+      font-size: 0.82rem;
+      color: #a0804a;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Nav Buttons ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 400px;
+      justify-content: center;
+    }
+
+    .nav-btn {
+      flex: 1;
+      max-width: 160px;
+      padding: 12px 0;
+      border-radius: 12px;
+      border: 1.5px solid #bee3f8;
+      background: #fff;
+      color: #4a90d9;
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.18s;
+      box-shadow: 0 2px 8px rgba(74, 144, 217, 0.08);
+    }
+
+    .nav-btn:hover {
+      background: #ebf8ff;
+      border-color: #4a90d9;
+      box-shadow: 0 4px 16px rgba(74, 144, 217, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .nav-btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .card-counter {
+      font-size: 0.85rem;
+      color: #a0aec0;
+      min-width: 48px;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* ── Dot Indicators ── */
+    .dots {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 400px;
+    }
+
+    .dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      font-size: 0.72rem;
+      color: #a0aec0;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .dot .dot-kana {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #718096;
+      line-height: 1;
+    }
+
+    .dot .dot-id {
+      font-size: 0.6rem;
+      color: #cbd5e0;
+      line-height: 1;
+    }
+
+    .dot:hover {
+      border-color: #4a90d9;
+      background: #ebf8ff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(74, 144, 217, 0.15);
+    }
+
+    .dot.active {
+      border-color: #4a90d9;
+      background: #4a90d9;
+      box-shadow: 0 4px 12px rgba(74, 144, 217, 0.35);
+    }
+
+    .dot.active .dot-kana {
+      color: #fff;
+    }
+
+    .dot.active .dot-id {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .dot.seen:not(.active) {
+      border-color: #68d391;
+      background: #f0fff4;
+    }
+
+    .dot.seen:not(.active) .dot-kana {
+      color: #276749;
+    }
+
+    .dot.seen:not(.active) .dot-id {
+      color: #9ae6b4;
+    }
+
+    /* ── Speed Control ── */
+    .speed-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: #a0aec0;
+    }
+
+    .speed-bar input[type="range"] {
+      width: 100px;
+      accent-color: #4a90d9;
+      cursor: pointer;
+    }
+
+    .speed-bar .speed-val {
+      min-width: 30px;
+      text-align: left;
+      color: #4a90d9;
+      font-weight: 600;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      color: #a0aec0;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      margin-top: 80px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>學習卡片</h1>
+    <div class="speed-bar">
+      <span>語速</span>
+      <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.1" value="0.8"
+        oninput="document.getElementById('rateVal').textContent = parseFloat(this.value).toFixed(1) + 'x'">
+      <span class="speed-val" id="rateVal">0.8x</span>
+    </div>
+  </header>
+
+  <main id="app">
+    <div class="loading">載入中…</div>
+  </main>
+
+  <script>
+    // 備用資料（fetch 失敗時使用）
+    const FALLBACK = {
+      words: [
+        { id: 1, japanese: "うえ", kanji: "上", romaji: "ue", chinese: "上面・上方", example_jp: "机の上に本があります。", example_zh: "桌子上面有書。" },
+        { id: 2, japanese: "した", kanji: "下", romaji: "shita", chinese: "下面・下方", example_jp: "椅子の下に猫がいます。", example_zh: "椅子下面有貓。" },
+        { id: 3, japanese: "みぎ", kanji: "右", romaji: "migi", chinese: "右邊・右側", example_jp: "駅の右に銀行があります。", example_zh: "車站右邊有銀行。" },
+        { id: 4, japanese: "ひだり", kanji: "左", romaji: "hidari", chinese: "左邊・左側", example_jp: "学校の左にコンビニがあります。", example_zh: "學校左邊有便利商店。" },
+        { id: 5, japanese: "まえ", kanji: "前", romaji: "mae", chinese: "前面・正前方", example_jp: "駅の前にバス停があります。", example_zh: "車站前面有公車站。" },
+        { id: 6, japanese: "うしろ", kanji: "後ろ", romaji: "ushiro", chinese: "後面・背後", example_jp: "建物の後ろに駐車場があります。", example_zh: "建築物後面有停車場。" },
+        { id: 7, japanese: "なか", kanji: "中", romaji: "naka", chinese: "裡面・中間", example_jp: "引き出しの中に鍵があります。", example_zh: "抽屜裡面有鑰匙。" },
+        { id: 8, japanese: "そと", kanji: "外", romaji: "soto", chinese: "外面・外部", example_jp: "外は寒いですね。", example_zh: "外面很冷呢。" },
+        { id: 9, japanese: "となり", kanji: "隣", romaji: "tonari", chinese: "隔壁・緊鄰的旁邊", example_jp: "私のとなりに田中さんが座っています。", example_zh: "田中先生坐在我旁邊。" },
+        { id: 10, japanese: "ちかく", kanji: "近く", romaji: "chikaku", chinese: "附近・近處", example_jp: "学校の近くに住んでいます。", example_zh: "住在學校附近。" },
+      ]
+    };
+
+    let words = [];
+    let current = 0;
+    let flipped = false;
+    let flipDirection = null;
+    let seen = new Set();
+    let highlightTimers = [];
+
+    // 將 #exJp 的文字逐字變紅，間隔依 TTS 語速計算；每次呼叫前先清除舊計時器
+    function highlightExJp() {
+      highlightTimers.forEach(t => clearTimeout(t));
+      highlightTimers = [];
+      const el = document.getElementById('exJp');
+      if (!el) return;
+      const text = el.textContent;
+      const rate = parseFloat(document.getElementById('rateSlider').value);
+      const msPerChar = 200 / rate;
+      el.innerHTML = text.split('').map((ch, i) => `<span id="hc-${i}">${ch}</span>`).join('');
+      text.split('').forEach((_, i) => {
+        const t = setTimeout(() => {
+          const span = document.getElementById(`hc-${i}`);
+          if (span) span.style.color = 'red';
+        }, i * msPerChar);
+        highlightTimers.push(t);
+      });
+    }
+
+    // 以日語 TTS 朗讀指定文字，語速依頂部滑桿設定
+    function speak(text) {
+      window.speechSynthesis.cancel();
+      const uttr = new SpeechSynthesisUtterance(text);
+      uttr.lang = 'ja-JP';
+      uttr.rate = parseFloat(document.getElementById('rateSlider').value);
+      window.speechSynthesis.speak(uttr);
+    }
+
+    // 從 vocabulary.json 載入詞彙，失敗時回退至內嵌 FALLBACK 資料
+    async function loadData() {
+      try {
+        const res = await fetch('./vocabulary.json');
+        const data = await res.json();
+        words = data.words;
+      } catch {
+        words = FALLBACK.words;
+      }
+      render();
+    }
+
+    // 動態建立頁面 DOM 並綁定鍵盤事件
+    function render() {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+    <section class="progress-section">
+      <div class="progress-label">
+        <span>學習進度</span>
+        <span id="progText">0 / ${words.length} 已翻開</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progFill"></div>
+      </div>
+    </section>
+
+    <div class="scene">
+      <div class="card" id="card" onclick="flipCardRight()">
+        <div class="face front">
+          <span class="card-index" id="cardIndex">1 / ${words.length}</span>
+          <div class="jp-kana"  id="jpKana"></div>
+          <div class="jp-kanji" id="jpKanji"></div>
+          <div class="jp-romaji" id="jpRomaji"></div>
+          <div class="flip-hint">點擊或按空白鍵翻轉</div>
+        </div>
+        <div class="face back">
+          <div class="zh-meaning" id="zhMeaning"></div>
+          <div class="example-box">
+            <div class="example-jp"  id="exJp"></div>
+            <div class="example-divider"></div>
+            <div class="example-zh"  id="exZh"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="nav-btn" onclick="go(-1)">← 上一張</button>
+      <span class="card-counter" id="navCounter">1 / ${words.length}</span>
+      <button class="nav-btn" onclick="go(1)">下一張 →</button>
+    </div>
+
+    <div class="dots" id="dots"></div>
+  `;
+
+      buildDots();
+      showCard();
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        if (e.key === ' ') { e.preventDefault(); flipCardRight(); }
+        if (e.key === 'ArrowDown') { e.preventDefault(); flipCardDown(); }
+        //if (e.key === 'ArrowUp') { e.preventDefault(); flipCardUp(); }  //ArrowUp另有用途，關閉翻卡功能
+      });
+    }
+
+    // 依詞彙陣列產生底部點點指示器
+    function buildDots() {
+      const container = document.getElementById('dots');
+      container.innerHTML = '';
+      words.forEach((w, i) => {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        d.id = `dot-${i}`;
+        d.innerHTML = `<span class="dot-kana">${w.japanese}</span><span class="dot-id">${i + 1}</span>`;
+        d.onclick = () => goTo(i);
+        container.appendChild(d);
+      });
+    }
+
+    // 將當前索引的詞彙資料填入卡片 DOM，並重置翻轉狀態與點點顏色
+    function showCard() {
+      highlightTimers.forEach(t => clearTimeout(t));
+      highlightTimers = [];
+
+      speak(words[current].japanese);
+
+      const w = words[current];
+      document.getElementById('jpKana').textContent = w.japanese;
+      document.getElementById('jpKanji').textContent = w.kanji;
+      document.getElementById('jpRomaji').textContent = w.romaji;
+      document.getElementById('zhMeaning').textContent = w.chinese;
+      document.getElementById('exJp').textContent = w.example_jp;
+      document.getElementById('exZh').textContent = w.example_zh;
+      document.getElementById('cardIndex').textContent = `${current + 1} / ${words.length}`;
+      document.getElementById('navCounter').textContent = `${current + 1} / ${words.length}`;
+
+      const card = document.getElementById('card');
+      card.classList.remove('flip-left', 'flip-right', 'flip-up', 'flip-down');
+      flipped = false;
+      flipDirection = null;
+
+      document.querySelectorAll('.dot').forEach((d, i) => {
+        d.classList.remove('active', 'seen');
+        if (i === current) d.classList.add('active');
+        else if (seen.has(i)) d.classList.add('seen');
+      });
+    }
+
+    // 執行翻牌：同方向再按翻回正面；不同方向切換；首次翻開時記錄進度
+    function flipCard(dir) {
+      const card = document.getElementById('card');
+      const allDirs = ['flip-left', 'flip-right', 'flip-up', 'flip-down'];
+
+      if (flipped && flipDirection === dir) {  // 【情況一】卡片已翻開，且再次按下相同方向
+        card.classList.remove('flip-' + dir);  // → 移除該方向的 CSS class，CSS transition 會自動播放翻回動畫
+        flipped = false;       // 標記卡片回到正面
+        flipDirection = null;  // 清除記憶中的翻轉方向
+      } else if (flipped) {  // 【情況二】卡片已翻開，但按下的是不同方向
+
+        card.classList.remove(...allDirs); // → 先一次移除所有方向 class，讓卡片瞬間回正（無動畫）
+        requestAnimationFrame(() => {
+          card.classList.add('flip-' + dir); // 加上新方向的 class，觸發翻牌動畫
+          flipDirection = dir;               // 更新目前的翻轉方向
+        });
+      } else {
+        // 【情況三】卡片在正面，首次翻開
+        card.classList.add('flip-' + dir); // 加上方向 class，觸發翻牌動畫
+        flipped = true;                    // 標記卡片已翻開
+        flipDirection = dir;               // 記憶本次翻轉方向，供情況一/二判斷用
+        seen.add(current);                 // 將此卡片加入「已看過」集合
+        updateProgress();                  // 更新頂部進度條與文字
+        // 往下翻顯示例句 → 唸例句；其他方向顯示單字背面 → 唸平假名讀音
+
+      }
+
+      speak(flipped ? words[current].example_jp : words[current].japanese);
+      highlightExJp();
+
+    }
+
+    // 四方向翻牌的快捷包裝，供按鈕 onclick 與鍵盤事件呼叫
+    function flipCardLeft() { flipCard('left'); }
+    function flipCardRight() { flipCard('right'); }
+    function flipCardDown() { flipCard('down'); }
+    function flipCardUp() { flipCard('up'); }
+
+    // 切換到相對位移的卡片（+1 下一張，-1 上一張），循環捲動
+    function go(dir) {
+      current = (current + dir + words.length) % words.length;
+      showCard();
+    }
+
+    // 直接跳至指定索引的卡片（點點指示器點擊時呼叫）
+    function goTo(idx) {
+      current = idx;
+      showCard();
+    }
+
+    // 依 seen 集合大小更新進度條寬度與文字顯示
+    function updateProgress() {
+      const pct = (seen.size / words.length) * 100;
+      document.getElementById('progFill').style.width = pct + '%';
+      document.getElementById('progText').textContent = `${seen.size} / ${words.length} 已翻開`;
+    }
+
+    loadData();
+  </script>
+
+</body>
+
+</html>
