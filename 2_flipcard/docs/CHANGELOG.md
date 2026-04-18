@@ -71,6 +71,41 @@
 
 ---
 
+## [0.2.0] — 2026-04-18
+
+### 新增
+
+- **index2.html** — 重寫主要翻卡學習頁面
+  - 從 `vocabulary.json` 載入 10 個方位詞（含 CORS Fallback 機制）
+  - 支援左/右/下三方向 CSS 3D 翻轉（↑ 保留 CSS，鍵盤停用）
+  - 鍵盤控制：← → Space ↓（↑ 已停用，另作他用）
+  - 進度追蹤（`seen` Set + 進度條 + 點點指示器三狀態）
+  - Header 語速滑桿（`#rateSlider`）：範圍 0.5x~1.5x，步進 0.2，預設 1.0x
+
+- **翻牌自動 TTS**（`speak()` 函式）
+  - 右翻/左翻 → 朗讀 `japanese` 欄位（平假名讀音）
+  - 下翻 → 朗讀 `example_jp` 欄位（日文例句）
+  - 切換卡片時自動停止前次語音
+
+- **`highlightExJp()` 逐字高亮**
+  - 翻牌後將 `#exJp` 例句文字逐字變紅（由左至右）
+  - 間隔公式：`200 / rate` ms/字，與語速滑桿連動
+  - 新增 `highlightTimers` 狀態變數：追蹤計時器 ID，切換卡片時全部清除
+
+### 變更
+
+- `ArrowUp` 鍵盤翻牌停用（`flipCardUp()` 函式與 `flip-up` CSS class 保留，鍵盤綁定已注解）
+- 所有 JavaScript 函式上方新增繁體中文說明備註
+
+### 更新文件
+
+- **docs/FEATURES.md** — 新增功能 15（翻牌 TTS）、16（語速滑桿）、17（字符高亮）
+- **docs/ARCHITECTURE.md** — 新增 `highlightTimers` 狀態變數、`speak()` 與 `highlightExJp()` 實作說明
+- **docs/TESTING.md** — 新增 index2.html 的 TTS、語速滑桿、逐字高亮測試項目
+- **docs/DEVELOPMENT.md** — 更新環境變數表（語速滑桿規格、高亮計時基準、翻卡動畫時間）
+
+---
+
 ## 版本規劃
 
 > 未來版本待計畫，計畫文件置於 `docs/plans/`。
